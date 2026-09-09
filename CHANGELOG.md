@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.5 — 2026-09-09
+
 - Report the original screenshot dimensions, pin coordinates, and image URL for feedback referring to older frame versions.
 
 ## 0.1.4 — 2026-09-09
