@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.3 — 2026-09-09
+
 - Require successful, complete release-history validation before publishing new releases or recovering drafts; prevent older versions replacing newer releases.
 - Report the current root pin consistently for feedback replies and accept uppercase UUIDs when replying.
 - Bound import files before parsing, validate image budgets before decoding, and handle large base64 images with a simple character scan.
