@@ -39,7 +39,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: node scripts/package.mjs
-      - name: Publish immutable GitHub release
+      - name: Publish versioned GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/publish.mjs

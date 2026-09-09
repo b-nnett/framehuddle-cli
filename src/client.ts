@@ -61,11 +61,13 @@ export class Client {
         }
       }
       if (!response.ok) {
-        const data = await response.json().catch(() => ({})) as { error?: string };
+        const parsed: unknown = await response.json().catch(() => null);
+        const data = parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+          ? parsed as { error?: unknown } : {};
         const hint = response.status === 401 ? "Check whether the API key is expired or revoked." :
           response.status === 403 ? "Check the key’s scopes and project restriction." : "Request failed.";
         const message = typeof data.error === "string" ? data.error.replaceAll(this.key, "[redacted]") : hint;
-        throw new APIError(response.status, `${message} ${data.error ? hint : ""}`.trim());
+        throw new APIError(response.status, `${message} ${typeof data.error === "string" ? hint : ""}`.trim());
       }
       return response;
     }

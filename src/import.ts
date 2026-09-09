@@ -1,21 +1,64 @@
-import { readFile } from "node:fs/promises";
+import { open } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { importSchema } from "./schema";
 import type { Client } from "./client";
 
+export const MAX_IMPORT_FILE_BYTES = 142_000_000;
+const MAX_IMAGE_BYTES = 3_000_000;
+const MAX_EXPORT_BYTES = 100_000_000;
+
+export async function collectBounded(chunks: AsyncIterable<Uint8Array>, limit: number): Promise<Buffer> {
+  const parts: Uint8Array[] = [];
+  let total = 0;
+  for await (const chunk of chunks) {
+    total += chunk.byteLength;
+    if (total > limit) throw new Error(`Import file exceeds the ${limit.toLocaleString("en-US")} byte input limit.`);
+    parts.push(chunk);
+  }
+  return Buffer.concat(parts, total);
+}
+
+export async function readBoundedFile(file: string, limit = MAX_IMPORT_FILE_BYTES): Promise<Buffer> {
+  const handle = await open(file, "r");
+  try {
+    const stat = await handle.stat();
+    if (!stat.isFile()) throw new Error("Import must be a regular file.");
+    if (stat.size > limit) throw new Error(`Import file exceeds the ${limit.toLocaleString("en-US")} byte input limit.`);
+    // The streaming check also enforces the limit if the file grows after stat.
+    return await collectBounded(handle.createReadStream({ autoClose: false, highWaterMark: 64 * 1024 }), limit);
+  } finally { await handle.close(); }
+}
+
+export function imageByteLength(image: string | undefined, id: string): number {
+  if (!image || image.length % 4 !== 0) throw new Error(`Missing or invalid base64 image: ${id}`);
+  const padding = image.endsWith("==") ? 2 : image.endsWith("=") ? 1 : 0;
+  // A single character-class search avoids recursive matching of long base64 groups.
+  if (/[^A-Za-z0-9+/]/.test(image.slice(0, image.length - padding)))
+    throw new Error(`Missing or invalid base64 image: ${id}`);
+  return image.length / 4 * 3 - padding;
+}
+
+export function checkImageBudget(screens: { id: string; image?: string }[], maxTotal = MAX_EXPORT_BYTES): number {
+  let total = 0;
+  for (const screen of screens) {
+    const bytes = imageByteLength(screen.image, screen.id);
+    if (bytes > MAX_IMAGE_BYTES) throw new Error(`Image exceeds 3 MB: ${screen.id}`);
+    total += bytes;
+    if (total > maxTotal) throw new Error("Export exceeds its decoded image budget (100 MB maximum).");
+  }
+  return total;
+}
+
 export async function readExport(file: string) {
-  const input = importSchema.parse(JSON.parse(await readFile(file, "utf8")));
+  // 142 MB covers 100 MB of base64-encoded images plus metadata/formatting overhead.
+  const input = importSchema.parse(JSON.parse((await readBoundedFile(file)).toString("utf8")));
+  const bytes = checkImageBudget(input.screens);
   const images = input.screens.map(screen => {
-    if (!screen.image || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(screen.image))
-      throw new Error(`Missing or invalid base64 image: ${screen.id}`);
-    const bytes = Buffer.from(screen.image, "base64");
-    if (bytes.length > 3_000_000) throw new Error(`Image exceeds 3 MB: ${screen.id}`);
+    const bytes = Buffer.from(screen.image!, "base64");
     if (createHash("sha256").update(bytes).digest("hex") !== screen.sha256)
       throw new Error(`Checksum mismatch: ${screen.id}`);
     return bytes;
   });
-  const bytes = images.reduce((total, image) => total + image.length, 0);
-  if (bytes > 100_000_000) throw new Error("Export exceeds 100 MB.");
   const manifest = { ...input, screens: input.screens.map(({ image, ...screen }) => screen) };
   return { manifest, images, bytes };
 }

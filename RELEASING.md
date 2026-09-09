@@ -24,7 +24,7 @@ A version tag triggers `.github/workflows/release.yml`:
 2. Install and test the candidate package through a temporary Homebrew tap on macOS and Linux before publication. Verify the tag matches `package.json` and its commit belongs to `main`.
 3. Build the executable from the locked dependencies. Package only the executable, package metadata, documentation, and licenses.
 4. Publish a GitHub Release with a universal `framehuddle-X.Y.Z.tgz` package and `SHA256SUMS`. GitHub also provides tagged source archives.
-5. Update `b-nnett/homebrew-framehuddle` with the immutable version URL and computed checksum. The tap runs its own macOS/Linux install tests.
+5. Update `b-nnett/homebrew-framehuddle` with the versioned download URL and computed checksum. The tap runs its own macOS/Linux install tests.
 
 Users receive updates with `brew update && brew upgrade framehuddle`. The package is distributed through GitHub Releases and Homebrew; this pipeline does not publish to the npm registry.
 
@@ -39,7 +39,9 @@ GitHub Actions and npm dependencies are checked weekly by Dependabot. Review and
 ## Recovery
 
 - Re-run a failed release from Actions, or `gh workflow run release.yml --ref vX.Y.Z`.
-- Published assets are never replaced. A rerun checks the existing bytes and resumes the tap update. Draft assets can be repaired before publication.
+- This workflow never replaces published assets. A rerun checks the existing bytes and resumes the tap update. This is a workflow guarantee; GitHub-enforced immutable releases are a separate repository setting.
+- Before creating or repairing a draft, publication must successfully read the complete release history, including drafts. A successful empty history permits the first release; API, authentication, malformed-response, and network failures abort publication. Both new releases and recovered drafts must be newer than every published stable release.
+- Older already-published releases may have their assets verified without changing GitHub's latest marker; the tap's downgrade guard still prevents replacing a newer Homebrew version.
 - The formula generator refuses to downgrade a newer tap version when an older workflow is rerun.
 - Do not move or delete a published tag. Fix a bad release with a new patch version.
 - If users need to hold a known-good installed release, they can use `brew pin framehuddle` and later `brew unpin framehuddle`.

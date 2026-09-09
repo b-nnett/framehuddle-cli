@@ -175,13 +175,17 @@ export async function run(args: string[], env: Record<string, string | undefined
         client.request<LoadedExport>(prefix), client.all<Comment>(`${prefix}/comments${query}`),
       ]);
       const screens = new Map(manifest.screens.map(screen => [screen.id, screen]));
+      const roots = new Map(comments.filter(comment => !comment.parentId).map(comment => [comment.id, comment]));
       output({ projectId, exportId, version: manifest.export.version, comments: comments.map(comment => {
         const screen = screens.get(comment.screenId);
+        const root = comment.parentId ? roots.get(comment.parentId) : comment;
+        if (!root) throw new Error(`Missing root thread for comment ${comment.id}; fetch feedback again.`);
         return { ...comment, rootId: comment.parentId ?? comment.id,
+          x: root.x, y: root.y,
           screenTitle: screen?.title ?? null, section: screen?.section ?? null,
           width: screen?.width ?? null, height: screen?.height ?? null,
-          pixelX: screen ? Math.round(comment.x * screen.width) : null,
-          pixelY: screen ? Math.round(comment.y * screen.height) : null,
+          pixelX: screen ? Math.round(root.x * screen.width) : null,
+          pixelY: screen ? Math.round(root.y * screen.height) : null,
           imageUrl: screen?.imageUrl ?? null };
       }) });
       break;
@@ -192,10 +196,10 @@ export async function run(args: string[], env: Record<string, string | undefined
       break;
     }
     case "comments reply": {
-      const id = uuid.parse(operand());
+      const id = uuid.parse(operand()).toLowerCase();
       const body = required("body");
       const comments = await client.all<Comment>(`${exp()}/comments`);
-      const root = comments.find(comment => comment.id === id);
+      const root = comments.find(comment => comment.id.toLowerCase() === id);
       if (!root || root.parentId) throw new Error("Reply requires a root comment ID in the selected export.");
       output(await client.request(`${exp()}/comments`, "POST", commentSchema.parse({
         screenId: root.screenId, parentId: id, body, x: root.x, y: root.y,

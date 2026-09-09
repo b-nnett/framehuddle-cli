@@ -11,7 +11,7 @@ framehuddle --help
 
 Homebrew installs Node.js automatically. Upgrade with `brew update && brew upgrade framehuddle`.
 
-Versioned packages and SHA-256 checksums are also available in [GitHub Releases](https://github.com/b-nnett/framehuddle-cli/releases). With Node.js 24 or later, install a downloaded package using `npm install -g ./framehuddle-0.1.0.tgz`. Distribution currently uses GitHub Releases and Homebrew; no npm registry account is required.
+Versioned packages and SHA-256 checksums are also available in [GitHub Releases](https://github.com/b-nnett/framehuddle-cli/releases/latest). With Node.js 24 or later, download the package and `SHA256SUMS` from the same release, then run `shasum -a 256 -c SHA256SUMS`. Install with `npm install -g ./framehuddle-VERSION.tgz`, replacing `VERSION` with the version in the filename you downloaded. Distribution currently uses GitHub Releases and Homebrew; no npm registry account is required.
 
 ## Development
 
@@ -74,7 +74,11 @@ framehuddle screens get welcome --output ./welcome.png
 
 Feedback includes every page of comments, root thread IDs, frame titles, nested sections, image URLs, dimensions, and pixel coordinates computed from normalized pins. `comments list` skips the manifest lookup and needs only `comments:read`. Replies reuse their root thread’s screen and pin, and require both comment read and write scopes.
 
+In `feedback`, every comment's `x`, `y`, `pixelX`, and `pixelY` describe the current root thread pin, including after the pin moves. `comments list` returns the API's raw per-comment fields. If a root is missing because feedback changed during pagination, fetch feedback again.
+
 Export validation uses the application's schema, validates placement and declared dimensions, and checks base64, checksums, and decoded byte limits before any API request. Actual image formats and pixel dimensions are additionally verified by the server. Imports remove embedded images from the manifest, upload original bytes with up to three workers, and publish only after every upload succeeds. Rerun an identical version after interruption to resume safely; a changed manifest needs a new version.
+
+Import files are limited to 142 MB before JSON parsing, allowing base64 overhead and roughly 8 MB for metadata and formatting on top of the 100 MB decoded-image budget. Individual images remain limited to 3 MB. Decoded sizes are checked before image buffers are allocated. All sizes use decimal bytes; excessive JSON whitespace or escaping also counts toward the input-file limit.
 
 ## Output and failures
 

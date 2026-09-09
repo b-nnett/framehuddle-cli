@@ -199,3 +199,45 @@ test("client does not follow HTTP redirects with credentials", async t => {
   await assert.rejects(new Client(origin, "secret").request("projects"), /Request failed/);
   assert.equal(received, false);
 });
+
+test("API failures preserve their status when the JSON body is null or not an object", async () => {
+  for (const body of [null, [], "unavailable", 42]) {
+    const client = new Client("https://framehuddle.com", "test-key", { fetch: (async () => json(body, 503)) as typeof fetch });
+    await assert.rejects(client.request("projects"), error => {
+      assert.equal((error as { status: number }).status, 503);
+      assert.match(String(error), /HTTP 503/);
+      return true;
+    });
+  }
+});
+
+test("feedback uses the current root pin when replies arrive on an earlier page", async t => {
+  const dir = await temporary(t), result = capture();
+  const origin = await server(t, (req, res) => {
+    const data = !req.url!.includes("/comments")
+      ? { export: { version: "v1" }, screens: [{ id: "welcome", title: "Welcome", section: [], width: 100, height: 200 }] }
+      : req.url!.includes("cursor=")
+        ? { items: [{ id: rootId, parentId: null, screenId: "welcome", x: .7, y: .8 }], nextCursor: null }
+        : { items: [{ id: replyId, parentId: rootId, screenId: "welcome", x: .1, y: .2 }], nextCursor: rootId };
+    res.end(JSON.stringify(data));
+  });
+  await run(["feedback", "--json"], { FRAMEHUDDLE_URL: origin, FRAMEHUDDLE_API_KEY: "test-key", FRAMEHUDDLE_PROJECT_ID: projectId, FRAMEHUDDLE_EXPORT_ID: exportId }, result.io, dir);
+  const { comments } = JSON.parse(result.out[0]);
+  assert.equal(comments.length, 2);
+  for (const comment of comments) assert.deepEqual([comment.x, comment.y, comment.pixelX, comment.pixelY], [.7, .8, 70, 160]);
+});
+
+test("reply accepts uppercase UUIDs and sends the canonical root ID", async t => {
+  const dir = await temporary(t), result = capture();
+  const id = "abcdefab-abcd-4abc-8abc-abcdefabcdef";
+  const origin = await server(t, async (req, res) => {
+    if (req.method === "GET") res.end(JSON.stringify({ items: [{ id, parentId: null, screenId: "welcome", x: .2, y: .3 }], nextCursor: null }));
+    else {
+      const chunks = []; for await (const chunk of req) chunks.push(chunk);
+      assert.equal(JSON.parse(Buffer.concat(chunks).toString()).parentId, id);
+      res.end(JSON.stringify({ id: replyId }));
+    }
+  });
+  await run(["comments", "reply", id.toUpperCase(), "--body", "Thanks"], { FRAMEHUDDLE_URL: origin, FRAMEHUDDLE_API_KEY: "test-key", FRAMEHUDDLE_PROJECT_ID: projectId, FRAMEHUDDLE_EXPORT_ID: exportId }, result.io, dir);
+  assert.equal(JSON.parse(result.out[0]).id, replyId);
+});
