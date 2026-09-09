@@ -241,3 +241,20 @@ test("reply accepts uppercase UUIDs and sends the canonical root ID", async t =>
   await run(["comments", "reply", id.toUpperCase(), "--body", "Thanks"], { FRAMEHUDDLE_URL: origin, FRAMEHUDDLE_API_KEY: "test-key", FRAMEHUDDLE_PROJECT_ID: projectId, FRAMEHUDDLE_EXPORT_ID: exportId }, result.io, dir);
   assert.equal(JSON.parse(result.out[0]).id, replyId);
 });
+
+test("history feedback uses the referenced screenshot and its root pin for replies", async t => {
+  const dir = await temporary(t), result = capture();
+  const reference = {exportId:"33333333-3333-4333-8333-333333333333",version:"v1",screenTitle:"Original welcome",section:["Earlier flow"],width:320,height:640,imageUrl:"/earlier/welcome.png"};
+  const origin = await server(t, async (req,res) => {
+    res.end(JSON.stringify(req.url?.includes('/comments') ? {items:[
+      {id:rootId,parentId:null,screenId:"welcome",x:.25,y:.75,referenceExportId:reference.exportId,reference},
+      {id:replyId,parentId:rootId,screenId:"welcome",x:.1,y:.1,referenceExportId:reference.exportId,reference},
+    ],nextCursor:null} : {export:{version:"v2"},screens:[{id:"welcome",title:"Current welcome",width:400,height:800,section:["Current flow"],imageUrl:"/current/welcome.png"}]}));
+  });
+  await run(["feedback","--json"],{FRAMEHUDDLE_URL:origin,FRAMEHUDDLE_API_KEY:"test-key",FRAMEHUDDLE_PROJECT_ID:projectId,FRAMEHUDDLE_EXPORT_ID:exportId},result.io,dir);
+  for(const comment of JSON.parse(result.out[0]).comments){
+    assert.deepEqual([comment.pixelX,comment.pixelY,comment.width,comment.height],[80,480,320,640]);
+    assert.equal(comment.imageUrl,reference.imageUrl);assert.equal(comment.screenTitle,reference.screenTitle);
+    assert.deepEqual(comment.section,reference.section);
+  }
+});

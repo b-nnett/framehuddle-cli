@@ -90,7 +90,7 @@ framehuddle comments delete COMMENT_ID --yes
 framehuddle screens get welcome --output ./welcome.png
 ```
 
-Feedback includes every page of comments, root thread IDs, frame titles, nested sections, image URLs, dimensions, and pixel coordinates computed from normalized pins. `comments list` skips the manifest lookup and needs only `comments:read`. Replies reuse their root thread’s screen and pin, and require both comment read and write scopes.
+Feedback includes every page of comments, root thread IDs, frame titles, nested sections, image URLs, dimensions, and pixel coordinates computed from normalized pins. History comments stay in the current review and include `referenceExportId` and a `reference` object identifying the older screenshot. Enriched feedback uses that screenshot’s title, dimensions, image URL, and pin coordinates. `comments list` skips the manifest lookup and needs only `comments:read`. Replies reuse their root thread’s screen and pin, and require both comment read and write scopes.
 
 In `feedback`, every comment's `x`, `y`, `pixelX`, and `pixelY` describe the current root thread pin, including after the pin moves. `comments list` returns the API's raw per-comment fields. If a root is missing because feedback changed during pagination, fetch feedback again.
 

@@ -180,13 +180,16 @@ export async function run(args: string[], env: Record<string, string | undefined
         const screen = screens.get(comment.screenId);
         const root = comment.parentId ? roots.get(comment.parentId) : comment;
         if (!root) throw new Error(`Missing root thread for comment ${comment.id}; fetch feedback again.`);
+        const reference = root.reference;
+        const width = reference?.width ?? screen?.width;
+        const height = reference?.height ?? screen?.height;
         return { ...comment, rootId: comment.parentId ?? comment.id,
           x: root.x, y: root.y,
-          screenTitle: screen?.title ?? null, section: screen?.section ?? null,
-          width: screen?.width ?? null, height: screen?.height ?? null,
-          pixelX: screen ? Math.round(root.x * screen.width) : null,
-          pixelY: screen ? Math.round(root.y * screen.height) : null,
-          imageUrl: screen?.imageUrl ?? null };
+          screenTitle: reference?.screenTitle ?? screen?.title ?? null, section: reference?.section ?? screen?.section ?? null,
+          width: width ?? null, height: height ?? null,
+          pixelX: width !== undefined ? Math.round(root.x * width) : null,
+          pixelY: height !== undefined ? Math.round(root.y * height) : null,
+          imageUrl: reference?.imageUrl ?? screen?.imageUrl ?? null };
       }) });
       break;
     }
