@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: framehuddle-release
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Verify release tag
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const p = JSON.parse(fs.readFileSync("package.json")); assert.match(p.version, /^\d+\.\d+\.\d+$/); assert.equal(process.env.GITHUB_REF_NAME, `v${p.version}`);'
+          git merge-base --is-ancestor HEAD origin/main
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/package.mjs
+      - name: Publish immutable GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/publish.mjs
+      - name: Check out Homebrew tap
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: b-nnett/homebrew-framehuddle
+          ref: main
+          path: homebrew-tap
+          ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+      - name: Update version and checksum in Homebrew tap
+        run: |
+          VERSION=$(node -p 'JSON.parse(require("node:fs").readFileSync("package.json")).version')
+          node scripts/formula.mjs "release-assets/framehuddle-${VERSION}.tgz" homebrew-tap/Formula/framehuddle.rb
+          git -C homebrew-tap config user.name 'framehuddle-release[bot]'
+          git -C homebrew-tap config user.email '62760393+b-nnett@users.noreply.github.com'
+          if ! git -C homebrew-tap diff --quiet; then
+            git -C homebrew-tap add Formula/framehuddle.rb
+            git -C homebrew-tap commit -m "Update Framehuddle to ${VERSION}"
+            git -C homebrew-tap push origin HEAD:main
+          fi
