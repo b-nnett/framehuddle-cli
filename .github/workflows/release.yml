@@ -54,10 +54,4 @@ jobs:
         run: |
           VERSION=$(node -p 'JSON.parse(require("node:fs").readFileSync("package.json")).version')
           node scripts/formula.mjs "release-assets/framehuddle-${VERSION}.tgz" homebrew-tap/Formula/framehuddle.rb
-          git -C homebrew-tap config user.name 'framehuddle-release[bot]'
-          git -C homebrew-tap config user.email '62760393+b-nnett@users.noreply.github.com'
-          if ! git -C homebrew-tap diff --quiet; then
-            git -C homebrew-tap add Formula/framehuddle.rb
-            git -C homebrew-tap commit -m "Update Framehuddle to ${VERSION}"
-            git -C homebrew-tap push origin HEAD:main
-          fi
+          node scripts/update-tap.mjs homebrew-tap

@@ -1,6 +1,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 
 const { version } = JSON.parse(await readFile("package.json", "utf8"));
 const tag = `v${version}`;
@@ -14,7 +15,23 @@ if (existing.status === 0) {
   } else {
     await mkdir("release-assets/published", { recursive: true });
     execFileSync("gh", ["release", "download", tag, "--repo", repo, "--dir", "release-assets/published", "--clobber", ...assets.flatMap(name => ["--pattern", name])], { stdio: "inherit" });
-    for (const name of assets) assert.deepEqual(await readFile(`release-assets/published/${name}`), await readFile(`release-assets/${name}`), "Published release assets are immutable");
+    const archive = assets[0];
+    const published = await readFile(`release-assets/published/${archive}`);
+    const checksum = await readFile("release-assets/published/SHA256SUMS", "utf8");
+    assert.equal(checksum.trim(), `${createHash("sha256").update(published).digest("hex")}  ${archive}`, "Published checksum must match the archive");
+    // npm/tar versions can encode identical files with different tar metadata.
+    // Compare every shipped file, then retain the already-published archive bytes.
+    const expected = ["package/LICENSE", "package/README.md", "package/THIRD_PARTY_LICENSES", "package/dist/index.js", "package/package.json"].sort();
+    for (const location of ["release-assets", "release-assets/published"]) {
+      const entries = execFileSync("tar", ["-tzf", `${location}/${archive}`], { encoding: "utf8" }).trim().split("\n").sort();
+      assert.deepEqual(entries, expected, "Unexpected file in release archive");
+    }
+    for (const name of expected) {
+      const extract = location => execFileSync("tar", ["-xOzf", `${location}/${archive}`, name], { maxBuffer: 10_000_000 });
+      assert.deepEqual(extract("release-assets/published"), extract("release-assets"), `Published file differs: ${name}`);
+    }
+    await writeFile(`release-assets/${archive}`, published);
+    await writeFile("release-assets/SHA256SUMS", checksum);
     console.log(`Verified existing ${tag}; release assets unchanged.`);
     process.exit(0);
   }

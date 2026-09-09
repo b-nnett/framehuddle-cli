@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fix automatic Homebrew publication when the formula does not exist yet.
+- Make release retries preserve published archive bytes across npm/tar metadata differences.
+
 ## 0.1.0 — 2026-09-09
 
 - Public Framehuddle CLI with project management, screenshot export validation and imports, feedback retrieval, comments, and private screenshot downloads.
