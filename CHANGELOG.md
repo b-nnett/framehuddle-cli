@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fix the Homebrew executable wrapper on macOS and Linux.
+- Test a full Homebrew installation on both platforms before publishing any release.
+
 ## 0.1.1 — 2026-09-09
 
 - Fix automatic Homebrew publication when the formula does not exist yet.

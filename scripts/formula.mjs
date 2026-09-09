@@ -16,7 +16,7 @@ export function formula(version, sha256) {
 
   def install
     libexec.install "dist", "package.json", "THIRD_PARTY_LICENSES"
-    (bin/"framehuddle").write_env_script formula_opt_bin("node")/"node", libexec/"dist/index.js"
+    (bin/"framehuddle").write_env_script formula_opt_bin("node")/"node", libexec/"dist/index.js", {}
   end
 
   test do

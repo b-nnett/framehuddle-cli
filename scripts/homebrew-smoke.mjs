@@ -1,0 +1,25 @@
+import { execFileSync } from "node:child_process";
+import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { createHash } from "node:crypto";
+import { formula } from "./formula.mjs";
+
+if (process.env.GITHUB_ACTIONS !== "true") throw new Error("Run this installation check on an ephemeral GitHub Actions runner");
+const { version } = JSON.parse(await readFile("package.json", "utf8"));
+execFileSync(process.execPath, ["scripts/package.mjs"], { stdio: "inherit" });
+const archive = resolve(`release-assets/framehuddle-${version}.tgz`);
+const sha = createHash("sha256").update(await readFile(archive)).digest("hex");
+const tap = await mkdtemp(join(tmpdir(), "framehuddle-brew-"));
+await mkdir(join(tap, "Formula"));
+const text = formula(version, sha).replace(/  url "[^"]+"/, `  url "${pathToFileURL(archive).href}"`);
+await writeFile(join(tap, "Formula/framehuddle.rb"), text);
+const git = (...args) => execFileSync("git", args, { cwd: tap, stdio: "pipe" });
+git("init", "-b", "main"); git("add", "Formula/framehuddle.rb");
+git("-c", "user.name=Release check", "-c", "user.email=release@example.com", "commit", "-m", "Test candidate formula");
+const brew = (...args) => execFileSync("brew", args, { stdio: "inherit", env: { ...process.env, HOMEBREW_NO_AUTO_UPDATE: "1", HOMEBREW_NO_INSTALL_CLEANUP: "1" } });
+brew("tap", "framehuddle/release-test", tap);
+brew("install", "framehuddle/release-test/framehuddle");
+brew("test", "framehuddle/release-test/framehuddle");
+console.log(`Verified Homebrew installation of candidate ${version} before publication.`);

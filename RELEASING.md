@@ -21,7 +21,7 @@ The script verifies that local `main` matches GitHub, updates package and lockfi
 A version tag triggers `.github/workflows/release.yml`:
 
 1. Run type checking, tests, build, and standalone-package smoke tests on macOS and Linux with Node 24 and 26.
-2. Verify the tag matches `package.json` and its commit belongs to `main`.
+2. Install and test the candidate package through a temporary Homebrew tap on macOS and Linux before publication. Verify the tag matches `package.json` and its commit belongs to `main`.
 3. Build the executable from the locked dependencies. Package only the executable, package metadata, documentation, and licenses.
 4. Publish a GitHub Release with a universal `framehuddle-X.Y.Z.tgz` package and `SHA256SUMS`. GitHub also provides tagged source archives.
 5. Update `b-nnett/homebrew-framehuddle` with the immutable version URL and computed checksum. The tap runs its own macOS/Linux install tests.
