@@ -13,6 +13,24 @@ Homebrew installs Node.js automatically. Upgrade with `brew update && brew upgra
 
 Versioned packages and SHA-256 checksums are also available in [GitHub Releases](https://github.com/b-nnett/framehuddle-cli/releases/latest). With Node.js 24 or later, download the package and `SHA256SUMS` from the same release, then run `shasum -a 256 -c SHA256SUMS`. Install with `npm install -g ./framehuddle-VERSION.tgz`, replacing `VERSION` with the version in the filename you downloaded. Distribution currently uses GitHub Releases and Homebrew; no npm registry account is required.
 
+## Agent skill
+
+The [Framehuddle skill](https://github.com/b-nnett/framehuddle-cli/blob/main/skills/framehuddle/SKILL.md) teaches agents to select projects and exports, inspect pinned feedback, update threads, and publish screenshot exports with the CLI.
+
+Install it from your project directory and choose your coding agent when prompted:
+
+```sh
+npx skills add b-nnett/framehuddle-cli --skill framehuddle
+```
+
+Add `--global` to make it available across projects. To install specifically for Codex across all projects:
+
+```sh
+npx skills add b-nnett/framehuddle-cli --skill framehuddle --agent codex --global
+```
+
+In Codex, invoke `$framehuddle`, or ask the agent to work with Framehuddle feedback. The installer also supports other coding agents. Homebrew prints these installation instructions after installing or upgrading the CLI; view them again with `brew info b-nnett/framehuddle/framehuddle`.
+
 ## Development
 
 ```sh

@@ -19,6 +19,16 @@ export function formula(version, sha256) {
     (bin/"framehuddle").write_env_script formula_opt_bin("node")/"node", libexec/"dist/index.js", {}
   end
 
+  def caveats
+    <<~EOS
+      Install the Framehuddle agent skill from your project directory:
+        npx skills add b-nnett/framehuddle-cli --skill framehuddle
+
+      Choose your coding agent when prompted, or add --global for all projects.
+      Setup and examples: https://framehuddle.com/api-docs
+    EOS
+  end
+
   test do
     assert_equal version.to_s, shell_output("#{bin}/framehuddle --version").strip
     assert_match "exports import", shell_output("#{bin}/framehuddle --help")

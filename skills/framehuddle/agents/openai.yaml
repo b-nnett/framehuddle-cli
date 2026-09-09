@@ -1,0 +1,4 @@
+interface:
+  display_name: "Framehuddle"
+  short_description: "Review screenshot feedback with the Framehuddle CLI"
+  default_prompt: "Use $framehuddle to review open feedback for the selected project and export."

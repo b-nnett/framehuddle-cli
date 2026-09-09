@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Publish an installable Framehuddle agent skill with feedback, screenshot, thread, and export workflows.
+- Show the skill installation command and setup link after Homebrew installs and upgrades.
+
 ## 0.1.3 — 2026-09-09
 
 - Require successful, complete release-history validation before publishing new releases or recovering drafts; prevent older versions replacing newer releases.
