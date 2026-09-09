@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.1 — 2026-09-09
+
 - Fix automatic Homebrew publication when the formula does not exist yet.
 - Make release retries preserve published archive bytes across npm/tar metadata differences.
 
