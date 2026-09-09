@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.4 — 2026-09-09
+
 - Publish an installable Framehuddle agent skill with feedback, screenshot, thread, and export workflows.
 - Show the skill installation command and setup link after Homebrew installs and upgrades.
 

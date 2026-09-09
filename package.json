@@ -1,6 +1,6 @@
 {
   "name": "framehuddle",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Framehuddle projects, screenshot exports, and feedback from the terminal",
   "type": "module",
   "bin": {
