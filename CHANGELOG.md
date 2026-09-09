@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.2 — 2026-09-09
+
 - Fix the Homebrew executable wrapper on macOS and Linux.
 - Test a full Homebrew installation on both platforms before publishing any release.
 
